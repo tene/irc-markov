@@ -1,0 +1,3 @@
+A little set of utilities to generate random text seeded from irc logs via markov chains.
+
+This is not intended to be useful; it's a project for me to preactice while learning go.
