@@ -18,6 +18,7 @@ func parseline(line string) (string, string) {
 func breakwords(m string) {
 }
 
+// Oops, total needs to be per-prefix; needs a refactor
 type suffixlist struct {
 	total  int
 	weight map[string]map[string]int
