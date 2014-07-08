@@ -20,11 +20,21 @@ func breakwords(m string) {
 
 type suffixlist struct {
 	total  int
-	weight map[string]int
+	weight map[string]map[string]int
 }
 
 func (sl suffixlist) String() string {
-	return fmt.Sprintf("%d", sl.total)
+	return fmt.Sprintf("%#v", sl.weight)
+}
+
+func (sl suffixlist) Inc(p, s string) {
+	sl.total += 1
+	premap, ok := sl.weight[p]
+	if !ok {
+		premap = make(map[string]int)
+	}
+	premap[s] += 1
+	sl.weight[p] = premap
 }
 
 func premunge(str string) string {
@@ -41,13 +51,14 @@ func premunge(str string) string {
 	}, str)
 }
 
-func makepairs(words []string) []string {
-	ret := make([]string, len(words)-1)
-	prev := words[0]
-	for i, next := range words[1:] {
-		ret[i] = strings.Join([]string{prev, next}, " ")
+func makepairs(words []string) [][]string {
+	ret := make([][]string, len(words)+1)
+	prev := "<START>"
+	for i, next := range words {
+		ret[i] = []string{prev, next}
 		prev = next
 	}
+	ret[len(ret)-1] = []string{prev, "<EOL>"}
 	return ret
 }
 
@@ -55,6 +66,7 @@ func main() {
 	file, _ := os.Open(os.Args[1])
 	scanner := bufio.NewScanner(file)
 	stats := make(map[string]suffixlist)
+	global := suffixlist{0, make(map[string]map[string]int)}
 	for scanner.Scan() {
 		if matched, _ := regexp.Match("^\\d\\d:\\d\\d <", scanner.Bytes()); matched {
 			name, text := parseline(scanner.Text())
@@ -62,17 +74,15 @@ func main() {
 			words := strings.Split(text, " ")
 			list, ok := stats[name]
 			if !ok {
-				list = suffixlist{0, make(map[string]int)}
+				list = suffixlist{0, make(map[string]map[string]int)}
 			}
 			pairs := makepairs(words)
 			for _, pair := range pairs {
-				list.total += 1
-				list.weight[pair] += 1
+				list.Inc(pair[0], pair[1])
+				global.Inc(pair[0], pair[1])
 			}
-			fmt.Println(pairs)
-			fmt.Println(name, list.total)
 			stats[name] = list
 		}
 	}
-	fmt.Println(stats)
+	fmt.Println(global)
 }
