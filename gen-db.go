@@ -24,7 +24,7 @@ type suffixlist struct {
 }
 
 func (sl suffixlist) String() string {
-	return fmt.Sprintf("%v", sl.weight)
+	return fmt.Sprintf("%d", sl.total)
 }
 
 func premunge(str string) string {
@@ -41,6 +41,16 @@ func premunge(str string) string {
 	}, str)
 }
 
+func makepairs(words []string) []string {
+	ret := make([]string, len(words)-1)
+	prev := words[0]
+	for i, next := range words[1:] {
+		ret[i] = strings.Join([]string{prev, next}, " ")
+		prev = next
+	}
+	return ret
+}
+
 func main() {
 	file, _ := os.Open(os.Args[1])
 	scanner := bufio.NewScanner(file)
@@ -54,10 +64,12 @@ func main() {
 			if !ok {
 				list = suffixlist{0, make(map[string]int)}
 			}
-			for _, word := range words {
+			pairs := makepairs(words)
+			for _, pair := range pairs {
 				list.total += 1
-				list.weight[word] += 1
+				list.weight[pair] += 1
 			}
+			fmt.Println(pairs)
 			fmt.Println(name, list.total)
 			stats[name] = list
 		}
