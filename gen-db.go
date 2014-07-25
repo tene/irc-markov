@@ -20,18 +20,18 @@ func breakwords(m string) {
 
 type markov struct {
   name string
-  suffix map[string]suffixlist
+  suffix map[string]*suffixlist
 }
 
 type suffixlist struct {
 	total  int
-	weight map[string]int
+	weight map[string]*int
 }
 
 func (sl suffixlist) String() string {
   ret := ""
   for suffix, weight := range sl.weight {
-    ret += fmt.Sprintf("  %s: %d\n", suffix, weight)
+    ret += fmt.Sprintf("  %s: %d\n", suffix, *weight)
   }
   return ret;
 }
@@ -44,26 +44,31 @@ func (m markov) String() string {
   return ret;
 }
 
-func NewSuffixlist() suffixlist {
-  return suffixlist{weight: make(map[string]int)}
+func NewSuffixlist() *suffixlist {
+  return &suffixlist{weight: make(map[string]*int)}
 }
 
 func NewMarkov(name string) markov {
-  return markov{name: name, suffix: make(map[string]suffixlist)}
+  return markov{name: name, suffix: make(map[string]*suffixlist)}
 }
 
 func (m markov) Inc(prefix, suffix string) {
 	sl, ok := m.suffix[prefix]
 	if !ok {
 		sl = NewSuffixlist()
+    m.suffix[prefix] = sl
 	}
   sl.Inc(suffix)
-  m.suffix[prefix] = sl
 }
 
 func (sl suffixlist) Inc(suffix string) {
 	sl.total += 1
-  sl.weight[suffix] += 1
+  weight, ok := sl.weight[suffix]
+  if !ok {
+    weight = new(int)
+    sl.weight[suffix] = weight
+  }
+  *weight += 1
 }
 
 func premunge(str string) string {
