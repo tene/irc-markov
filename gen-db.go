@@ -18,24 +18,52 @@ func parseline(line string) (string, string) {
 func breakwords(m string) {
 }
 
-// Oops, total needs to be per-prefix; needs a refactor
+type markov struct {
+  name string
+  suffix map[string]suffixlist
+}
+
 type suffixlist struct {
 	total  int
-	weight map[string]map[string]int
+	weight map[string]int
 }
 
 func (sl suffixlist) String() string {
-	return fmt.Sprintf("%#v", sl.weight)
+  ret := ""
+  for suffix, weight := range sl.weight {
+    ret += fmt.Sprintf("  %s: %d\n", suffix, weight)
+  }
+  return ret;
 }
 
-func (sl suffixlist) Inc(p, s string) {
-	sl.total += 1
-	premap, ok := sl.weight[p]
+func (m markov) String() string {
+  ret := ""
+  for prefix, suffixes := range m.suffix {
+    ret += fmt.Sprintf("%s:\n%s\n", prefix, suffixes.String())
+  }
+  return ret;
+}
+
+func NewSuffixlist() suffixlist {
+  return suffixlist{weight: make(map[string]int)}
+}
+
+func NewMarkov(name string) markov {
+  return markov{name: name, suffix: make(map[string]suffixlist)}
+}
+
+func (m markov) Inc(prefix, suffix string) {
+	sl, ok := m.suffix[prefix]
 	if !ok {
-		premap = make(map[string]int)
+		sl = NewSuffixlist()
 	}
-	premap[s] += 1
-	sl.weight[p] = premap
+  sl.Inc(suffix)
+  m.suffix[prefix] = sl
+}
+
+func (sl suffixlist) Inc(suffix string) {
+	sl.total += 1
+  sl.weight[suffix] += 1
 }
 
 func premunge(str string) string {
@@ -66,8 +94,8 @@ func makepairs(words []string) [][]string {
 func main() {
 	file, _ := os.Open(os.Args[1])
 	scanner := bufio.NewScanner(file)
-	stats := make(map[string]suffixlist)
-	global := suffixlist{0, make(map[string]map[string]int)}
+	stats := make(map[string]markov)
+	global := NewMarkov("global")
 	for scanner.Scan() {
 		if matched, _ := regexp.Match("^\\d\\d:\\d\\d <", scanner.Bytes()); matched {
 			name, text := parseline(scanner.Text())
@@ -75,7 +103,7 @@ func main() {
 			words := strings.Split(text, " ")
 			list, ok := stats[name]
 			if !ok {
-				list = suffixlist{0, make(map[string]map[string]int)}
+				list = NewMarkov(name)
 			}
 			pairs := makepairs(words)
 			for _, pair := range pairs {
